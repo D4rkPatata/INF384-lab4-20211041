@@ -42,13 +42,14 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
   - ⟦pegar `gh run list --workflow ci --json databaseId,status,createdAt` con dos runs `in_progress` a la vez, o el mensaje `/version devuelve X, se esperaba Y` del smoke de uno de ellos, con el link al run⟧
 
 ### Defecto 5
-- Job y etapa: `build-push`, etapa build. Step `Escaneo de la imagen (informativo)`.
-- Problema que causa en el pipeline: es lo único que revisa lo que realmente se despliega (sistema operativo, runtime y dependencias de la imagen), y no detiene nada. Una imagen con HIGH o CRITICAL corregibles se sube a ECR y llega a `deploy`, que no se puede modificar. Deja pasar vulnerabilidades.
+- Job y etapa: `unit` e `integration`, etapa pre-build. Scripts `test:unit` y `test:integration` de `package.json`.
+- Problema que causa en el pipeline: el gate de cobertura de `unit` (`--include src/wallet.js --include src/util.js`, umbral 95%) mide solo 2 de los 4 archivos de `src/`. `handler.js` y `db.js` no se miden en ningún job, porque `integration` corre sin c8. Medidos localmente, `handler.js` tiene 78,57% de líneas y 66,66% de ramas. Ese código puede perder cobertura sin que el pipeline lo detecte (deja pasar).
 - Link al commit: ⟦LINK_COMMIT_5⟧
-- Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): ajustar configuración (falla si hay HIGH o CRITICAL con versión corregida disponible, conservando la tabla del resumen).
+- Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): ajustar configuración (c8 con `--check-coverage --lines 85 --branches 70` en `test:integration`).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
-  - ⟦pegar la anotación `N hallazgos HIGH o CRITICAL` y la tabla "Escaneo de la imagen" del resumen del run base, con el link; y que el run siguió a `deploy`⟧
-  - ⟦después: link al run con el step en rojo o en verde, según el caso⟧
+  - Antes: ⟦pegar la tabla del comando 1⟧
+  - Medición con la integración: ⟦pegar la tabla que me pasaste: All files 88,43 / 72,09; handler.js 78,57 / 66,66; db.js 97,4 / 84,61⟧
+  - Después: ⟦pegar la salida del comando 2 con `exit: 1` al forzar 95%, y el link al run donde `integration` queda en verde con el gate activo⟧
 
 ## Parte 2 · Implementación
 - Link al run en verde en main:

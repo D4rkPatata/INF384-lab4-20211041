@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test:unit": "c8 --check-coverage --lines 95 --branches 95 --include src/wallet.js --include src/util.js --reporter text node --test test/unit/",
-    "test:integration": "node --test test/integration/",
+    "test:integration": "c8 --check-coverage --lines 85 --branches 70 --include src/handler.js --include src/db.js --reporter text node --test test/integration/",
     "test:e2e": "playwright test",
     "build": "esbuild src/handler.js --bundle --platform=node --target=node20 --external:better-sqlite3 --outfile=dist/handler.js"
   },
