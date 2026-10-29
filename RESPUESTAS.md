@@ -7,7 +7,7 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 ### Defecto 1
 - Job y etapa: smoke, etapa deploy. Tiene needs: build-push, así que arranca al mismo nivel que `deploy` en vez de después (post-deploy).
 - Problema que causa en el pipeline: smoke corre en paralelo con deploy y llama a la Function URL mientras la Lambda todavía sirve la versión anterior, así que pasa en verde sin haber probado el código nuevo (deja pasar un despliegue roto o que nunca ocurrió). e2e y load dependen de smoke y heredan el problema
-- Link al commit: ⟦LINK_COMMIT_1⟧
+- Link al commit: https://github.com/D4rkPatata/INF384-lab4-20211041/commit/3afcf155391c88b02ff017637276e429b42539fd
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): mover de etapa (needs: deploy) y ajustar configuración (EXPECTED_COMMIT: ${{ github.sha }} en el step Smoke).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
   - Antes: Run test/smoke/smoke.sh
