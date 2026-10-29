@@ -22,7 +22,7 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 ### Defecto 2
 - Job y etapa: `sca`, etapa pre-build. Step `Trivy`, flag `--include-dev-deps`.
 - Problema que causa en el pipeline: Trivy escanea también `@playwright/test`, `c8` y `esbuild`, que no van en la imagen. Con `--exit-code 1`, un HIGH o CRITICAL en esos paquetes detiene el build por algo que nunca se despliega (prueba lo incorrecto). Lo que sí se despliega lo cubre el escaneo de la imagen.
-- Link al commit: ⟦LINK_COMMIT_2⟧
+- Link al commit: (https://github.com/D4rkPatata/INF384-lab4-20211041/commit/69d625d5313a891fbca834558928d530d146b579)
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): ajustar configuración (quitar `--include-dev-deps`).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
   - Antes: 2026-10-29T22:04:48Z    INFO    [npm] Detecting vulnerabilities...
@@ -33,7 +33,7 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 ### Defecto 3
 - Job y etapa: `load`, etapa post-deploy. No tiene condición `if`.
 - Problema que causa en el pipeline: ejecuta unos 12 minutos de carga (1m + 10m + 1m, 30 VUs) en cada push de cada pull request. Desperdicia tiempo, porque la duración del pipeline es la suma de los jobs, y genera tráfico real sobre la función compartida donde se despliegan todos los PR.
-- Link al commit: ⟦LINK_COMMIT_3⟧
+- Link al commit: https://github.com/D4rkPatata/INF384-lab4-20211041/commit/5c507a7280ee979592641950a7f399f7f629ef53
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): mover de etapa o evento (`if: github.event_name != 'pull_request'`; sigue corriendo en `push` a `main` y en `workflow_dispatch`).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
   - Antes el job load duraba 12 minutos
@@ -42,7 +42,7 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 ### Defecto 4
 - Job y etapa: nivel del workflow, afecta a `smoke`, `e2e` y `load` (post-deploy). La `concurrency` existe solo dentro de `deploy`.
 - Problema que causa en el pipeline: todos los PR despliegan en la misma función. `deploy` se serializa, pero lo que viene después no, así que el run B puede reemplazar la versión mientras el run A la está probando. Un run da verde o rojo por una versión que no es la suya (prueba de forma incorrecta).
-- Link al commit: ⟦LINK_COMMIT_4⟧
+- Link al commit: (https://github.com/D4rkPatata/INF384-lab4-20211041/commit/5886d6150fe85cc445d4e9ccea1512f738ab62f2)
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): ajustar configuración (`concurrency` a nivel de workflow, `group: ci-${{ github.repository }}`, `cancel-in-progress: false`).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
   - ⟦pegar `gh run list --workflow ci --json databaseId,status,createdAt` con dos runs `in_progress` a la vez, o el mensaje `/version devuelve X, se esperaba Y` del smoke de uno de ellos, con el link al run⟧
@@ -50,7 +50,7 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 ### Defecto 5
 - Job y etapa: `unit` e `integration`, etapa pre-build. Scripts `test:unit` y `test:integration` de `package.json`.
 - Problema que causa en el pipeline: el gate de cobertura de `unit` (`--include src/wallet.js --include src/util.js`, umbral 95%) mide solo 2 de los 4 archivos de `src/`. `handler.js` y `db.js` no se miden en ningún job, porque `integration` corre sin c8. Medidos localmente, `handler.js` tiene 78,57% de líneas y 66,66% de ramas. Ese código puede perder cobertura sin que el pipeline lo detecte (deja pasar).
-- Link al commit: ⟦LINK_COMMIT_5⟧
+- Link al commit: (https://github.com/D4rkPatata/INF384-lab4-20211041/commit/7978e3a2a37a1f6f426ff416e71e730373cc42cc)
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): ajustar configuración (c8 con `--check-coverage --lines 85 --branches 70` en `test:integration`).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
   - Antes: ------------|---------|----------|---------|---------|----------------------------------------
