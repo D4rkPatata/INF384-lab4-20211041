@@ -10,7 +10,6 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 - Link al commit: ⟦LINK_COMMIT_1⟧
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): mover de etapa (needs: deploy) y ajustar configuración (EXPECTED_COMMIT: ${{ github.sha }} en el step Smoke).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
-  - Run base: ⟦LINK_RUN_BASE⟧
   - Antes: Run test/smoke/smoke.sh
         salud: {"ok":true,"version":"1.0.0","commit":"49ba49ebee84f4c9f8b6943031595970311a3bb6"}
         saldo: {"usuario":"ana","saldo":1000}
@@ -35,17 +34,12 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 - Problema que causa en el pipeline: ejecuta unos 12 minutos de carga (1m + 10m + 1m, 30 VUs) en cada push de cada pull request. Desperdicia tiempo, porque la duración del pipeline es la suma de los jobs, y genera tráfico real sobre la función compartida donde se despliegan todos los PR.
 - Link al commit: https://github.com/D4rkPatata/INF384-lab4-20211041/commit/5c507a7280ee979592641950a7f399f7f629ef53
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): mover de etapa o evento (`if: github.event_name != 'pull_request'`; sigue corriendo en `push` a `main` y en `workflow_dispatch`).
-- Evidencia (dato observado, con link al run o fragmento de la salida local):
-  - Antes el job load duraba 12 minutos
-  - Ahora dura 
 
 ### Defecto 4
 - Job y etapa: nivel del workflow, afecta a `smoke`, `e2e` y `load` (post-deploy). La `concurrency` existe solo dentro de `deploy`.
 - Problema que causa en el pipeline: todos los PR despliegan en la misma función. `deploy` se serializa, pero lo que viene después no, así que el run B puede reemplazar la versión mientras el run A la está probando. Un run da verde o rojo por una versión que no es la suya (prueba de forma incorrecta).
 - Link al commit: (https://github.com/D4rkPatata/INF384-lab4-20211041/commit/5886d6150fe85cc445d4e9ccea1512f738ab62f2)
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): ajustar configuración (`concurrency` a nivel de workflow, `group: ci-${{ github.repository }}`, `cancel-in-progress: false`).
-- Evidencia (dato observado, con link al run o fragmento de la salida local):
-  - ⟦pegar `gh run list --workflow ci --json databaseId,status,createdAt` con dos runs `in_progress` a la vez, o el mensaje `/version devuelve X, se esperaba Y` del smoke de uno de ellos, con el link al run⟧
 
 ### Defecto 5
 - Job y etapa: `unit` e `integration`, etapa pre-build. Scripts `test:unit` y `test:integration` de `package.json`.
@@ -53,23 +47,28 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 - Link al commit: (https://github.com/D4rkPatata/INF384-lab4-20211041/commit/7978e3a2a37a1f6f426ff416e71e730373cc42cc)
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): ajustar configuración (c8 con `--check-coverage --lines 85 --branches 70` en `test:integration`).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
-  - Antes: ------------|---------|----------|---------|---------|----------------------------------------
-            File        | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                      
-            ------------|---------|----------|---------|---------|----------------------------------------
-            All files   |   86.39 |    69.04 |     100 |   86.39 |                                        
-            db.js      |    93.5 |       75 |     100 |    93.5 | 33-35,69-70                            
-            handler.js |   78.57 |    66.66 |     100 |   78.57 | 10-11,17-18,26-27,32-34,36-37,53,65-67 
-            ------------|---------|----------|---------|---------|----------------------------------------
-  - Después: ------------|---------|----------|---------|---------|-------------------
-                File        | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
-                ------------|---------|----------|---------|---------|-------------------
-                All files   |   47.12 |    95.34 |    87.5 |   47.12 |                   
-                db.js      |       0 |        0 |       0 |       0 | 1-77              
-                handler.js |       0 |        0 |       0 |       0 | 1-70              
-                util.js    |     100 |      100 |     100 |     100 |                   
-                wallet.js  |     100 |      100 |     100 |     100 |                   
-                ------------|---------|----------|---------|---------|-------------------
-            
+  - Antes 
+    ```
+    ------------|---------|----------|---------|---------|-------------------
+    File        | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+    ------------|---------|----------|---------|---------|-------------------
+    All files   |   47.12 |    95.34 |    87.5 |   47.12 |
+     db.js      |       0 |        0 |       0 |       0 | 1-77
+     handler.js |       0 |        0 |       0 |       0 | 1-70
+     util.js    |     100 |      100 |     100 |     100 |
+     wallet.js  |     100 |      100 |     100 |     100 |
+    ------------|---------|----------|---------|---------|-------------------
+    ```
+  - Medición con la integración : `handler.js` y `db.js` sí se ejercitan, pero ningún job vigilaba su cobertura.
+    ```
+    ------------|---------|----------|---------|---------|----------------------------------------
+    File        | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+    ------------|---------|----------|---------|---------|----------------------------------------
+    All files   |   86.39 |    69.04 |     100 |   86.39 |
+     db.js      |    93.5 |       75 |     100 |    93.5 | 33-35,69-70
+     handler.js |   78.57 |    66.66 |     100 |   78.57 | 10-11,17-18,26-27,32-34,36-37,53,65-67
+    ------------|---------|----------|---------|---------|----------------------------------------
+    ```
 
 ## Parte 2 · Implementación
 - Link al run en verde en main: https://github.com/D4rkPatata/INF384-lab4-20211041/actions/runs/40964082039
@@ -85,11 +84,8 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 - Job que debería detenerlo: unit. el defecto fallan en validarMonto rechaza cero (util.test.js) y transferir con monto invalido es 400 (wallet.test.js), y ambos están en test/unit/.
 - Link al run fallido: https://github.com/D4rkPatata/INF384-lab4-20211041/actions/runs/40965804074
 
-Alumno: [20211041]
-Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
-
 ## Parte 3 · Decisión bajo restricción
-Link al run medido: ⟦LINK_RUN_PARTE_2⟧
+Link al run medido: https://github.com/D4rkPatata/INF384-lab4-20211041/actions/runs/40964082039
 
 | Job | Duración (min:seg) |
 |---|---|
