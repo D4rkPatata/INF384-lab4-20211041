@@ -11,9 +11,13 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): mover de etapa (needs: deploy) y ajustar configuración (EXPECTED_COMMIT: ${{ github.sha }} en el step Smoke).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
   - Run base: ⟦LINK_RUN_BASE⟧
-  - Antes: ⟦pegar filas de `smoke` y `deploy` de `gh run view <RUN_ID> --json jobs --jq '.jobs[] | [.name,.startedAt,.completedAt] | @tsv'`: smoke empieza antes de que deploy termine⟧
-  - Antes: ⟦pegar la línea `salud: {...}` del log de smoke con su `commit`, comparado con el SHA del run; y que no aparece la línea `commit:`⟧
-  - Después: ⟦link al run corregido, con smoke empezando después de deploy y la línea `commit: <sha>`⟧
+  - Antes: Run test/smoke/smoke.sh
+        salud: {"ok":true,"version":"1.0.0","commit":"49ba49ebee84f4c9f8b6943031595970311a3bb6"}
+        saldo: {"usuario":"ana","saldo":1000}
+  - Después: Run test/smoke/smoke.sh
+        salud: {"ok":true,"version":"1.0.0","commit":"3afcf155391c88b02ff017637276e429b42539fd"}
+        commit: 3afcf155391c88b02ff017637276e429b42539fd
+        saldo: {"usuario":"ana","saldo":1000}
 
 ### Defecto 2
 - Job y etapa: `sca`, etapa pre-build. Step `Trivy`, flag `--include-dev-deps`.
@@ -21,8 +25,10 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 - Link al commit: ⟦LINK_COMMIT_2⟧
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): ajustar configuración (quitar `--include-dev-deps`).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
-  - ⟦pegar la salida de `docker run --rm -v "$PWD:/src" -w /src ghcr.io/aquasecurity/trivy:0.76.1 fs --scanners vuln --list-all-pkgs --format json --include-dev-deps package-lock.json | jq '[.Results[].Packages[]?] | length'`⟧
-  - ⟦pegar la misma salida sin `--include-dev-deps`; la diferencia son los paquetes de desarrollo escaneados de más⟧
+  - Antes: 2026-10-29T22:04:48Z    INFO    [npm] Detecting vulnerabilities...
+            122
+  - Despues: 2026-10-29T22:06:01Z    INFO    [npm] Detecting vulnerabilities...
+            38
 
 ### Defecto 3
 - Job y etapa: `load`, etapa post-deploy. No tiene condición `if`.
@@ -30,8 +36,8 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 - Link al commit: ⟦LINK_COMMIT_3⟧
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): mover de etapa o evento (`if: github.event_name != 'pull_request'`; sigue corriendo en `push` a `main` y en `workflow_dispatch`).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
-  - ⟦duración del job `load` en el run base: link y valor, frente a la de los demás jobs⟧
-  - ⟦después: link al run de PR donde `load` aparece como *skipped*⟧
+  - Antes el job load duraba 12 minutos
+  - Ahora dura 
 
 ### Defecto 4
 - Job y etapa: nivel del workflow, afecta a `smoke`, `e2e` y `load` (post-deploy). La `concurrency` existe solo dentro de `deploy`.
@@ -47,9 +53,23 @@ Presupuesto: [ 8 ] min  Métrica DORA: [ time-to-restore]
 - Link al commit: ⟦LINK_COMMIT_5⟧
 - Corrección (una o más: mover de etapa / dejar como informativo / eliminar / ajustar configuración / modificar tests): ajustar configuración (c8 con `--check-coverage --lines 85 --branches 70` en `test:integration`).
 - Evidencia (dato observado, con link al run o fragmento de la salida local):
-  - Antes: ⟦pegar la tabla del comando 1⟧
-  - Medición con la integración: ⟦pegar la tabla que me pasaste: All files 88,43 / 72,09; handler.js 78,57 / 66,66; db.js 97,4 / 84,61⟧
-  - Después: ⟦pegar la salida del comando 2 con `exit: 1` al forzar 95%, y el link al run donde `integration` queda en verde con el gate activo⟧
+  - Antes: ------------|---------|----------|---------|---------|----------------------------------------
+            File        | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                      
+            ------------|---------|----------|---------|---------|----------------------------------------
+            All files   |   86.39 |    69.04 |     100 |   86.39 |                                        
+            db.js      |    93.5 |       75 |     100 |    93.5 | 33-35,69-70                            
+            handler.js |   78.57 |    66.66 |     100 |   78.57 | 10-11,17-18,26-27,32-34,36-37,53,65-67 
+            ------------|---------|----------|---------|---------|----------------------------------------
+  - Después: ------------|---------|----------|---------|---------|-------------------
+                File        | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+                ------------|---------|----------|---------|---------|-------------------
+                All files   |   47.12 |    95.34 |    87.5 |   47.12 |                   
+                db.js      |       0 |        0 |       0 |       0 | 1-77              
+                handler.js |       0 |        0 |       0 |       0 | 1-70              
+                util.js    |     100 |      100 |     100 |     100 |                   
+                wallet.js  |     100 |      100 |     100 |     100 |                   
+                ------------|---------|----------|---------|---------|-------------------
+            
 
 ## Parte 2 · Implementación
 - Link al run en verde en main:
